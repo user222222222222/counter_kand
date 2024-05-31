@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: counter-frontend
+  labels:
+    app: counter-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: counter-frontend
+  template:
+    metadata:
+      labels:
+        app: counter-frontend
+    spec:
+      containers:
+        - name: counter-frontend
+          image: ghcr.io/gamesuchti/counter-frontend:v1
+          ports:
+            - containerPort: 3000
+              protocol: TCP
+          env:
+            - name: BACKEND_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: counter-frontend
+                  key: BACKEND_URL
+            - name: npm_config_cache
+              value: ./.npm-cache
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: counter-frontend
+  name: counter-frontend
+spec:
+  ports:
+    - name: 3000-tcp
+      port: 3000
+      protocol: TCP
+      targetPort: 3000
+  selector:
+    app: counter-frontend
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: counter-frontend
+spec:
+  to:
+    kind: Service
+    name: counter-frontend
+  port:
+    targetPort: 3000
+  tls:
+    termination: edge
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: counter-frontend
+data:
+  BACKEND_URL: "https://counter-backend-243738-timbossard.apps.exoscale-ch-gva-2-0.appuio.cloud"
